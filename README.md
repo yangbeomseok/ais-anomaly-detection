@@ -4,15 +4,19 @@ Maritime Vessel Anomaly Detection using AIS Data
 
 ## Overview
 
-AIS(선박자동식별장치) 데이터를 활용하여 선박의 이상 행동 패턴을 탐지하는 데이터 분석 프로젝트입니다.
-불법조업, 항로 이탈, AIS 신호 단절 등 해양 안전을 위협하는 이상 행동을 머신러닝 기반으로 식별합니다.
+KIOST 빅데이터AI센터에서 인턴하면서 연구선 관측자료 다루다 보니, AIS 데이터도 비슷한 방식으로 분석해볼 수 있겠다 싶어서 시작한 사이드 프로젝트입니다.
 
-## Key Features
+해양에서 선박이 AIS 신호를 통해 위치/속도/침로를 주기적으로 송신하는데, 이걸 역으로 활용하면 **"이 배 뭔가 이상한데?"** 를 데이터로 잡아낼 수 있지 않을까? 라는 생각이 출발점이었습니다.
 
-- **탐색적 데이터 분석**: 선박 유형별 분포, 교통량 패턴, 주요 항로 시각화
-- **피처 엔지니어링**: 속도 이상, 침로 급변, 신호 단절, 항로 이탈, 야간 활동 등
-- **이상 탐지 모델링**: Isolation Forest, DBSCAN, LOF 비교 분석
-- **지도 기반 시각화**: folium을 활용한 정상/이상 항적 시각화
+실제로 불법조업 선박은 단속 해역에서 급격한 방향 전환을 하거나, AIS 신호를 꺼버리는 패턴을 보입니다. 이런 행동 패턴을 비지도 학습으로 탐지하는 게 이 프로젝트의 핵심입니다.
+
+## 뭘 했나
+
+- NOAA에서 미국 연안 AIS 데이터 하루치(720만 건)를 가져와서
+- 활동량 상위 500척(63만 건)으로 추려서
+- 속도 이상, 급회전, 신호 단절 같은 피처를 만들고
+- Isolation Forest / LOF / DBSCAN 세 가지 모델로 이상 탐지 돌려서
+- 3개 중 2개 이상이 "이상"이라고 판단한 건만 최종 이상으로 잡았습니다
 
 ## Tech Stack
 
@@ -20,7 +24,6 @@ AIS(선박자동식별장치) 데이터를 활용하여 선박의 이상 행동 
 ![Pandas](https://img.shields.io/badge/pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
 ![Folium](https://img.shields.io/badge/folium-77B829?style=for-the-badge&logo=leaflet&logoColor=white)
-![Plotly](https://img.shields.io/badge/plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
 
 ## Project Structure
 
@@ -41,57 +44,98 @@ ais-anomaly-detection/
 ├── data/
 │   └── raw/                          # 원본 데이터 (git 미추적)
 ├── results/
-│   └── figures/                      # 분석 결과 시각화
+│   └── figures/
 ├── requirements.txt
 └── README.md
 ```
 
-## Data Sources
+## Data
 
-| 데이터 | 출처 | 용도 |
+| 데이터 | 출처 | 비고 |
 |--------|------|------|
-| NOAA AIS (2022) | [MarineCadastre](https://marinecadastre.gov/accessais/) | 프로토타이핑 |
-| AIS 동적 정보 | [해양수산부 공공데이터](https://www.data.go.kr/data/15129186/fileData.do) | 본 분석 |
+| NOAA AIS (2022-01-01) | [MarineCadastre](https://marinecadastre.gov/accessais/) | 미국 연안, 하루치 720만 건 |
+
+원본 CSV는 744MB라 git에 올리지 않았습니다. 노트북 01번에서 다운로드 및 전처리 과정을 확인할 수 있습니다.
 
 ## Analysis Pipeline
 
 ```
-데이터 수집 → 전처리 → EDA → 피처 엔지니어링 → 이상 탐지 → 시각화
+원본 720만 건 → 전처리 → 상위 500척 63만 건 → 피처 생성 → 모델 3종 → 앙상블 → 최종 4,907건 이상 (0.78%)
 ```
 
-1. **데이터 수집/전처리**: 결측치 처리, 좌표 범위 필터링, MMSI 기준 그룹화
-2. **EDA**: 선박 유형 분포, 시간대별 교통량, 주요 항로 히트맵
-3. **피처 엔지니어링**: 속도 편차, 침로 변화량, 신호 간격, 항로 이탈 거리
-4. **이상 탐지**: Isolation Forest / DBSCAN / LOF 모델 비교
-5. **시각화**: 지도 위 정상 항적(blue) vs 이상 항적(red) 오버레이
+---
 
 ## Results
 
-> NOAA AIS 2022-01-01 데이터 기준 (7,239,758 → 상위 500척 630,026 레코드)
+### 1. 어떤 배들이 있나
 
-### 선박 유형별 분포
 ![Vessel Type Distribution](results/figures/vessel_type_distribution.png)
 
-### 속도(SOG) 분포
+500척 중 절반 이상이 어선(Fishing)입니다. 미국 연안 데이터라 어선 비중이 높고, 화물선(Cargo)과 여객선(Passenger)이 뒤를 잇습니다. 어선이 많다는 건 이상 탐지 관점에서 좋은 소식인데, 실제로 불법조업 같은 이상 행동이 가장 빈번한 선종이 어선이기 때문입니다.
+
+### 2. 속도 분포
+
 ![Speed Distribution](results/figures/speed_distribution.png)
 
-### 피처 분포
+대부분의 선박이 0~5노트(정박 또는 저속)에 몰려 있습니다. 왼쪽 그래프에서 median이 0에 가까운 건, 정박 중인 선박의 AIS 신호가 포함되어 있기 때문입니다. 오른쪽을 보면 선종별 평균 속도 차이가 확연한데, HSC(고속선)가 가장 빠르고 어선이 느린 편입니다. 이 차이가 이상 탐지에서 중요합니다 — 어선이 갑자기 고속으로 달리면 의심할 만하니까요.
+
+### 3. 이상 탐지용 피처 분포
+
 ![Feature Distributions](results/figures/feature_distributions.png)
 
-### 모델 비교 (Isolation Forest / LOF / DBSCAN)
+4가지 피처를 만들었습니다.
+- **Speed Deviation**: 해당 선박의 평균 속도 대비 얼마나 벗어났는지. 대부분 0 근처에 몰려 있고 양 끝단이 이상 후보입니다.
+- **Course Change**: 연속 레코드 간 침로 변화량(도). 30도 이상이면 꽤 급격한 방향 전환입니다.
+- **Signal Gap**: AIS 신호 간 시간 간격(분). 보통 1분 내외인데, 30분 이상 끊기면 의도적 신호 차단을 의심할 수 있습니다.
+- **Night Activity**: 선박별 야간(22시~06시) 활동 비율. 야간에만 움직이는 선박은 주의 대상입니다.
+
+### 4. 모델 비교
+
 ![Model Comparison](results/figures/model_comparison.png)
 
-### 정상 vs 이상 피처 비교
+3가지 모델을 돌렸는데, Isolation Forest와 LOF는 각각 31,477건(5%)으로 거의 같은 수를 잡았고, DBSCAN은 3,804건으로 적습니다. DBSCAN이 적은 건 메모리 한계로 3만 건 샘플링 후 돌렸기 때문입니다.
+
+오른쪽 Model Agreement를 보면 대부분이 0(정상)이고, 2개 이상 모델이 동의한 건이 최종 이상으로 잡힙니다. 단일 모델만 이상이라고 한 건은 false positive일 가능성이 높아서 걸러냈습니다.
+
+### 5. 정상 vs 이상 — 뭐가 다른가
+
 ![Normal vs Anomaly](results/figures/normal_vs_anomaly.png)
 
-### 이상 탐지 결과
+이상으로 판정된 레코드(빨강)가 정상(파랑)과 어떻게 다른지 보여줍니다.
+- **SOG**: 이상 레코드는 고속 구간(15~20kn)에 뚜렷하게 몰려 있습니다. 평소 느린 배가 갑자기 빨라진 경우입니다.
+- **Speed Deviation**: 양 극단(특히 +2 이상)에 이상이 집중됩니다.
+- **Course Change**: 160~180도 급회전에서 이상이 튑니다. 거의 유턴 수준의 방향 전환입니다.
+- **Signal Gap**: 이상 레코드가 80초 이상 구간에 많습니다. 정상은 대부분 60~70초 간격으로 균일합니다.
+
+### 6. 최종 이상 탐지 결과
+
 ![Anomaly Distribution](results/figures/anomaly_distribution.png)
 
-### 시간대별 이상 빈도
+63만 건 중 **4,907건(0.78%)** 이 최종 이상으로 판정됐습니다. 500척 중 479척에서 1건 이상의 이상이 감지됐는데, 이건 "이상한 배"가 아니라 "이상한 순간"을 잡은 것이기 때문에 자연스러운 결과입니다. 정상적인 선박도 항구 입출항 시 급회전하거나 일시적으로 속도가 튀는 경우가 있으니까요.
+
+### 7. 시간대별 이상 빈도
+
 ![Hourly Anomaly Rate](results/figures/hourly_anomaly_rate.png)
 
-### 이상 유형별 공간 분포
+UTC 기준 시간대별 이상 발생률입니다. 특정 시간대에 편중되지 않고 비교적 고르게 분포하는데, 미국 연안 데이터라 시차가 다양한 지역이 섞여 있어서 그런 것으로 보입니다. 한국 해역 데이터로 분석하면 야간 집중 패턴이 더 뚜렷하게 나올 수 있습니다.
+
+### 8. 이상 유형별 공간 분포
+
 ![Anomaly Types Spatial](results/figures/anomaly_types_spatial.png)
+
+이상을 유형별로 나눠서 지도에 찍었습니다.
+- **Speed Anomaly (1,554건)**: 미국 서해안과 동해안 연안에 골고루 분포합니다.
+- **Course Change > 90도 (1,422건)**: 항구 근처에 집중됩니다. 입출항 시 급회전이 많기 때문입니다.
+- **Signal Gap > 1hr (0건)**: 상위 500척은 활동량이 많은 선박이라 장시간 신호 단절이 없었습니다. 실제 불법조업 선박은 활동량 자체가 적을 수 있어서, 전체 데이터 분석 시에는 다른 결과가 나올 것으로 예상됩니다.
+
+---
+
+## 한계점 및 향후 계획
+
+- 현재는 미국 연안 데이터를 썼지만, 최종 목표는 **한국 해역(해양수산부 공공데이터)** 적용입니다
+- 상위 500척만 추출했기 때문에 신호 단절 패턴이 잡히지 않았습니다. 전체 선박 대상 분석이 필요합니다
+- DBSCAN은 메모리 한계로 샘플링했는데, 향후 Mini-Batch 방식이나 HDBSCAN으로 개선할 수 있습니다
+- 라벨이 없는 비지도 학습이라 정확도 측정이 어렵습니다. 실제 불법조업 적발 데이터와 매칭하면 검증이 가능합니다
 
 ## Getting Started
 
@@ -101,6 +145,8 @@ cd ais-anomaly-detection
 pip install -r requirements.txt
 jupyter notebook
 ```
+
+노트북을 01번부터 순서대로 실행하면 됩니다. 원본 데이터는 01번 노트북에서 NOAA 사이트에서 다운로드할 수 있습니다.
 
 ## License
 
