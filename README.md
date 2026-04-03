@@ -67,6 +67,12 @@ ais-anomaly-detection/
 
 ## Results
 
+### 0. 선박 교통량 지도
+
+![Traffic Map](results/figures/traffic_map.png)
+
+2022년 1월 1일 하루 동안 미국 연안에서 AIS 신호를 보낸 선박 500척의 위치입니다. 동해안, 서해안, 멕시코만 연안을 따라 항적이 분포하고, 주요 항구 근처에 밀집되어 있는 게 보입니다.
+
 ### 1. 어떤 배들이 있나
 
 ![Vessel Type Distribution](results/figures/vessel_type_distribution.png)
@@ -107,19 +113,31 @@ ais-anomaly-detection/
 - **Course Change**: 160~180도 급회전에서 이상이 튑니다. 거의 유턴 수준의 방향 전환입니다.
 - **Signal Gap**: 이상 레코드가 80초 이상 구간에 많습니다. 정상은 대부분 60~70초 간격으로 균일합니다.
 
-### 6. 최종 이상 탐지 결과
+### 6. 이상 항적 지도
+
+![Anomaly Map](results/figures/anomaly_map_static.png)
+
+실제 지도 위에 정상 항적(파랑)과 이상 항적(빨강)을 찍었습니다. 이상이 연안 전체에 분포하지만, 특히 항구 입출항 구간과 항로 전환 지점에 집중되는 게 보입니다.
+
+### 7. 이상 상위 3척 항적 추적
+
+![Top Vessels](results/figures/top_vessels_map.png)
+
+이상 레코드가 가장 많은 선박 3척의 항적을 추적했습니다. 서해안에서 장거리 이동하면서 이상 구간(점)이 반복적으로 나타나는 패턴이 보입니다. 이런 선박은 실제로 정밀 조사 대상이 될 수 있습니다.
+
+### 8. 최종 이상 탐지 결과
 
 ![Anomaly Distribution](results/figures/anomaly_distribution.png)
 
 63만 건 중 **4,907건(0.78%)** 이 최종 이상으로 판정됐습니다. 500척 중 479척에서 1건 이상의 이상이 감지됐는데, 이건 "이상한 배"가 아니라 "이상한 순간"을 잡은 것이기 때문에 자연스러운 결과입니다. 정상적인 선박도 항구 입출항 시 급회전하거나 일시적으로 속도가 튀는 경우가 있으니까요.
 
-### 7. 시간대별 이상 빈도
+### 9. 시간대별 이상 빈도
 
 ![Hourly Anomaly Rate](results/figures/hourly_anomaly_rate.png)
 
 UTC 기준 시간대별 이상 발생률입니다. 특정 시간대에 편중되지 않고 비교적 고르게 분포하는데, 미국 연안 데이터라 시차가 다양한 지역이 섞여 있어서 그런 것으로 보입니다. 한국 해역 데이터로 분석하면 야간 집중 패턴이 더 뚜렷하게 나올 수 있습니다.
 
-### 8. 이상 유형별 공간 분포
+### 10. 이상 유형별 공간 분포
 
 ![Anomaly Types Spatial](results/figures/anomaly_types_spatial.png)
 
