@@ -137,7 +137,29 @@ ais-anomaly-detection/
 
 UTC 기준 시간대별 이상 발생률입니다. 특정 시간대에 편중되지 않고 비교적 고르게 분포하는데, 미국 연안 데이터라 시차가 다양한 지역이 섞여 있어서 그런 것으로 보입니다. 한국 해역 데이터로 분석하면 야간 집중 패턴이 더 뚜렷하게 나올 수 있습니다.
 
-### 10. 이상 유형별 공간 분포
+### 10. 선박 유형별 이상 비율
+
+![Anomaly Rate by Type](results/figures/anomaly_rate_by_type.png)
+
+HSC(고속선)가 1.1%로 가장 높고, 어선이 0.6%로 가장 낮습니다. 의외로 어선이 낮은데, 이건 미국 연안 데이터라 한국처럼 불법조업 이슈가 반영되지 않아서입니다. 고속선과 여객선이 높은 건 운항 특성상 급가속/급감속이 잦기 때문으로 보입니다.
+
+### 11. 피처 중요도
+
+![Feature Importance](results/figures/feature_importance.png)
+
+Isolation Forest에서 Permutation Importance를 뽑아봤습니다. **SOG(속도)**와 **course_change(침로 변화)**가 이상 판단에 가장 큰 영향을 줬습니다. 직관적으로도 맞는 결과인데, "갑자기 빨라지거나 급회전하는 배"가 가장 의심스러운 거니까요. signal_gap_sec과 is_night은 상대적으로 낮은데, 앞서 봤듯이 상위 500척에서는 신호 단절이 거의 없었기 때문입니다.
+
+### 12. 이상 1위 선박 딥다이브 (MMSI: 416497000)
+
+![Deep Dive Timeseries](results/figures/deep_dive_timeseries.png)
+
+이상 레코드가 가장 많은 선박 한 척을 24시간 추적한 시계열입니다. 위에서부터 SOG(속도), COG(침로), Course Change(침로 변화량)입니다. 빨간 점이 이상으로 탐지된 시점인데, 초반 가속 구간(0~200분)에 이상이 집중되어 있습니다. 출항 직후 14노트에서 20노트까지 급가속하면서 침로도 270도에서 300도로 전환하는 구간입니다.
+
+![Deep Dive Map](results/figures/deep_dive_map.png)
+
+같은 선박의 항적을 지도에 찍으면 이렇게 됩니다. 초록 삼각형이 출발, 빨간 사각형이 도착. 빨간 점이 이상 구간인데, 출발 직후와 중간 항로 전환 지점에 몰려 있습니다.
+
+### 13. 이상 유형별 공간 분포
 
 ![Anomaly Types Spatial](results/figures/anomaly_types_spatial.png)
 
