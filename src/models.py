@@ -40,12 +40,28 @@ def detect_lof(df: pd.DataFrame, contamination: float = 0.05) -> pd.DataFrame:
     return df
 
 
-def detect_dbscan(df: pd.DataFrame, eps: float = 0.5, min_samples: int = 10) -> pd.DataFrame:
-    """DBSCAN 기반 이상 탐지 (클러스터 미소속 = 이상)."""
+def detect_dbscan(df: pd.DataFrame, eps: float = 0.5, min_samples: int = 10,
+                  max_samples: int = 100000) -> pd.DataFrame:
+    """DBSCAN 기반 이상 탐지 (클러스터 미소속 = 이상). 대용량 시 샘플링."""
     df = df.copy()
-    X, _ = prepare_features(df)
-    model = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1)
-    labels = model.fit_predict(X)
+    X_full, scaler = prepare_features(df)
+
+    if len(X_full) > max_samples:
+        sample_idx = np.random.RandomState(42).choice(len(X_full), max_samples, replace=False)
+        X_sample = X_full[sample_idx]
+        model = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1)
+        sample_labels = model.fit_predict(X_sample)
+
+        from sklearn.neighbors import NearestNeighbors
+        nn = NearestNeighbors(n_neighbors=1, n_jobs=-1)
+        nn.fit(X_sample)
+        dists, indices = nn.kneighbors(X_full)
+        labels = sample_labels[indices.ravel()]
+        labels[dists.ravel() > eps] = -1
+    else:
+        model = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1)
+        labels = model.fit_predict(X_full)
+
     df["anomaly_dbscan"] = (labels == -1).astype(int)
     return df
 

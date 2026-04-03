@@ -50,7 +50,7 @@ ais-anomaly-detection/
 
 | 데이터 | 출처 | 용도 |
 |--------|------|------|
-| AIS Dataset | [Kaggle](https://www.kaggle.com/datasets/eminserkanerdonmez/ais-dataset) | 프로토타이핑 |
+| NOAA AIS (2022) | [MarineCadastre](https://marinecadastre.gov/accessais/) | 프로토타이핑 |
 | AIS 동적 정보 | [해양수산부 공공데이터](https://www.data.go.kr/data/15129186/fileData.do) | 본 분석 |
 
 ## Analysis Pipeline
@@ -67,7 +67,31 @@ ais-anomaly-detection/
 
 ## Results
 
-> 분석 완료 후 주요 결과 시각화가 추가됩니다.
+> NOAA AIS 2022-01-01 데이터 기준 (7,239,758 → 상위 500척 630,026 레코드)
+
+### 선박 유형별 분포
+![Vessel Type Distribution](results/figures/vessel_type_distribution.png)
+
+### 속도(SOG) 분포
+![Speed Distribution](results/figures/speed_distribution.png)
+
+### 피처 분포
+![Feature Distributions](results/figures/feature_distributions.png)
+
+### 모델 비교 (Isolation Forest / LOF / DBSCAN)
+![Model Comparison](results/figures/model_comparison.png)
+
+### 정상 vs 이상 피처 비교
+![Normal vs Anomaly](results/figures/normal_vs_anomaly.png)
+
+### 이상 탐지 결과
+![Anomaly Distribution](results/figures/anomaly_distribution.png)
+
+### 시간대별 이상 빈도
+![Hourly Anomaly Rate](results/figures/hourly_anomaly_rate.png)
+
+### 이상 유형별 공간 분포
+![Anomaly Types Spatial](results/figures/anomaly_types_spatial.png)
 
 ## Getting Started
 
