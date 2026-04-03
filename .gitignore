@@ -2,7 +2,6 @@
 data/raw/
 *.csv
 *.pkl
-*.parquet
 *.h5
 
 # Python

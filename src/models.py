@@ -41,7 +41,7 @@ def detect_lof(df: pd.DataFrame, contamination: float = 0.05) -> pd.DataFrame:
 
 
 def detect_dbscan(df: pd.DataFrame, eps: float = 0.5, min_samples: int = 10,
-                  max_samples: int = 100000) -> pd.DataFrame:
+                  max_samples: int = 30000) -> pd.DataFrame:
     """DBSCAN 기반 이상 탐지 (클러스터 미소속 = 이상). 대용량 시 샘플링."""
     df = df.copy()
     X_full, scaler = prepare_features(df)
