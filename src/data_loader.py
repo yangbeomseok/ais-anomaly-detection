@@ -3,8 +3,10 @@
 import pandas as pd
 from pathlib import Path
 
+from .config import load_config
 
-DATA_DIR = Path(__file__).parent.parent / "data" / "raw"
+_cfg = load_config()
+DATA_DIR = Path(__file__).parent.parent / _cfg.get("data", {}).get("raw_dir", "data/raw")
 
 
 def load_ais_csv(filename: str) -> pd.DataFrame:
@@ -17,7 +19,7 @@ def load_ais_csv(filename: str) -> pd.DataFrame:
 
 def load_all_ais(pattern: str = "*.csv") -> pd.DataFrame:
     """data/raw/ 내 모든 AIS CSV를 병합 로드한다."""
-    files = list(DATA_DIR.glob(pattern))
+    files = sorted(DATA_DIR.glob(pattern))
     if not files:
         raise FileNotFoundError(f"데이터 파일이 없습니다: {DATA_DIR}/{pattern}")
     dfs = [pd.read_csv(f) for f in files]

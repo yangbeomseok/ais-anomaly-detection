@@ -1,0 +1,47 @@
+# AIS 이상 탐지 설정 파일
+
+data:
+  raw_dir: data/raw
+  cleaned_path: data/ais_cleaned.parquet
+  featured_path: data/ais_featured.parquet
+  results_path: data/ais_results.parquet
+
+preprocessing:
+  max_speed: 50.0          # 최대 유효 속도 (knots)
+  stop_threshold: 0.5      # 정박 판정 기준 속도 (knots)
+  top_n_vessels: 500        # 분석 대상 선박 수
+
+features:
+  columns:
+    - SOG
+    - speed_deviation
+    - acceleration
+    - course_change
+    - heading_cog_diff
+    - signal_gap_sec
+    - stop_duration_min
+    - is_night
+
+models:
+  isolation_forest:
+    contamination: 0.05
+    random_state: 42
+
+  lof:
+    contamination: 0.05
+    n_neighbors: 30
+
+  hdbscan:
+    min_cluster_size: 50
+    min_samples: 10
+
+  ensemble:
+    threshold: 2            # 최소 동의 모델 수 (2/3)
+
+shap:
+  max_samples: 5000         # SHAP 계산 시 최대 샘플 수
+
+visualization:
+  normal_sample_size: 5000
+  anomaly_marker_radius: 3
+  dpi: 150
