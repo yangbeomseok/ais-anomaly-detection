@@ -20,11 +20,13 @@ def make_map_ax(fig, extent=None, facecolor="#0d1117", subplot_spec=None):
         ax = fig.add_subplot(*subplot_spec, projection=ccrs.PlateCarree(), facecolor=facecolor)
     else:
         ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree(), facecolor=facecolor)
-    ax.add_feature(cfeature.LAND, facecolor="#1a1a2e", edgecolor="none")
-    ax.add_feature(cfeature.OCEAN, facecolor="#0d1117")
-    ax.add_feature(cfeature.COASTLINE, linewidth=0.5, edgecolor="#444444")
-    ax.add_feature(cfeature.BORDERS, linewidth=0.3, edgecolor="#333333", linestyle="--")
-    ax.add_feature(cfeature.STATES, linewidth=0.2, edgecolor="#2a2a2a")
+    ax.add_feature(cfeature.LAND.with_scale("10m"), facecolor="#1a1a2e", edgecolor="none")
+    ax.add_feature(cfeature.OCEAN.with_scale("10m"), facecolor="#0d1117")
+    ax.add_feature(cfeature.COASTLINE.with_scale("10m"), linewidth=0.5, edgecolor="#444444")
+    ax.add_feature(cfeature.RIVERS.with_scale("10m"), linewidth=0.4, edgecolor="#1a3a5c")
+    ax.add_feature(cfeature.LAKES.with_scale("10m"), facecolor="#0d1117", edgecolor="#444444", linewidth=0.3)
+    ax.add_feature(cfeature.BORDERS.with_scale("10m"), linewidth=0.3, edgecolor="#333333", linestyle="--")
+    ax.add_feature(cfeature.STATES.with_scale("10m"), linewidth=0.2, edgecolor="#2a2a2a")
     if extent:
         ax.set_extent(extent, crs=ccrs.PlateCarree())
     gl = ax.gridlines(draw_labels=True, linewidth=0.3, color="#333333", alpha=0.5)
