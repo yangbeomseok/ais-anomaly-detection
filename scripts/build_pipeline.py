@@ -1,23 +1,30 @@
 """1개월 AIS 데이터 전체 파이프라인 (메모리 최적화 버전)
 1차: 일별 CSV에서 선박별 레코드 수 카운트 → 상위 500척 확정
 2차: 해당 선박만 필터링하며 로드 → 전처리 → 피처 → 모델
+
+v2 개선: NaN imputation, IF auto threshold (elbow), per-vessel LOF/HDBSCAN
 """
 
 import pandas as pd
 import numpy as np
+import gc
 import sys
 from pathlib import Path
 from collections import Counter
 
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.cluster import HDBSCAN
+from sklearn.preprocessing import StandardScaler
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent))          # scripts/ 디렉토리도 추가
 sys.stdout.reconfigure(line_buffering=True)
 
 from src.preprocessing import clean_coordinates, clean_speed, parse_timestamp, sort_by_vessel_time
 from src.features import build_features
-from src.models import (
-    detect_isolation_forest, detect_lof, detect_hdbscan,
-    ensemble_anomaly, FEATURE_COLS
-)
+from src.models import ensemble_anomaly, FEATURE_COLS
+from run_models import impute_features, find_elbow_threshold
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 RAW_DIR = DATA_DIR / "raw"
@@ -78,28 +85,105 @@ df = build_features(df)
 df.to_parquet(DATA_DIR / "ais_featured.parquet", index=False)
 print(f"  저장: ais_featured.parquet ({(DATA_DIR / 'ais_featured.parquet').stat().st_size / 1e6:.1f} MB)")
 
-# ── 모델 실행 ──
+# ── 모델 실행 (v2: imputation, auto IF threshold, per-vessel LOF/HDBSCAN) ──
 print("\n=== 모델 실행 ===")
-df_model = df.dropna(subset=FEATURE_COLS).copy()
+
+# NaN imputation (dropna 대신) — 전체 행 보존
+print("  NaN imputation (선박별 중앙값)...")
+df_model = impute_features(df)
 del df
-print(f"  모델 입력: {len(df_model):,} rows")
+gc.collect()
+n_total = len(df_model)
+print(f"  모델 입력: {n_total:,} rows (100% preserved)")
 
-print("  Isolation Forest...")
-df_model, if_model = detect_isolation_forest(df_model, contamination=0.05)
-print(f"    → {df_model['anomaly_if'].sum():,}")
+# 피처 스케일링
+X_raw = df_model[FEATURE_COLS].values
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_raw)
+del X_raw
+gc.collect()
 
-print("  LOF...")
-df_model, lof_model = detect_lof(df_model, contamination=0.05, n_neighbors=30)
-print(f"    → {df_model['anomaly_lof'].sum():,}")
+# 미세 노이즈 (LOF 동일 거리 방지)
+rng = np.random.RandomState(42)
+X_scaled += rng.normal(0, 1e-8, X_scaled.shape)
 
-print("  HDBSCAN...")
-df_model, hdb_model = detect_hdbscan(df_model, min_cluster_size=50, min_samples=10)
-print(f"    → {df_model['anomaly_hdbscan'].sum():,}")
+# 선박별 인덱스 사전
+vessels = df_model["MMSI"].unique()
+vessel_idx = {
+    mmsi: np.where(df_model["MMSI"].values == mmsi)[0]
+    for mmsi in vessels
+}
+print(f"  선박 수: {len(vessels)}")
 
+# ── Isolation Forest (글로벌, 자동 임계값 - elbow method) ──
+print("  Isolation Forest (auto threshold)...")
+model_if = IsolationForest(random_state=42, n_jobs=-1)
+model_if.fit(X_scaled)
+scores_if = model_if.score_samples(X_scaled)
+
+RESULTS_DIR = DATA_DIR.parent / "results" / "figures"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+threshold_if = find_elbow_threshold(
+    scores_if, plot_path=str(RESULTS_DIR / "if_auto_threshold.png")
+)
+df_model["anomaly_if"] = (scores_if < threshold_if).astype(int)
+n_if = int(df_model["anomaly_if"].sum())
+print(f"    → {n_if:,} ({n_if/n_total*100:.2f}%, auto)")
+del model_if
+gc.collect()
+
+# ── LOF (선박별) ──
+print(f"  LOF (per-vessel, {len(vessels)} vessels)...")
+lof_arr = np.zeros(n_total, dtype=np.int8)
+
+for i, mmsi in enumerate(vessels):
+    idx = vessel_idx[mmsi]
+    X_v = X_scaled[idx]
+    n_pts = len(X_v)
+    if n_pts < 10:
+        continue
+    n_neighbors = min(30, n_pts - 1)
+    lof = LocalOutlierFactor(n_neighbors=n_neighbors, contamination=0.05)
+    preds = lof.fit_predict(X_v)
+    lof_arr[idx] = (preds == -1).astype(np.int8)
+    if (i + 1) % 100 == 0:
+        print(f"    LOF progress: {i+1}/{len(vessels)} vessels")
+
+df_model["anomaly_lof"] = lof_arr
+n_lof = int(lof_arr.sum())
+print(f"    → {n_lof:,} ({n_lof/n_total*100:.2f}%)")
+del lof_arr
+gc.collect()
+
+# ── HDBSCAN (선박별) ──
+print(f"  HDBSCAN (per-vessel, {len(vessels)} vessels)...")
+hdb_arr = np.zeros(n_total, dtype=np.int8)
+
+for i, mmsi in enumerate(vessels):
+    idx = vessel_idx[mmsi]
+    X_v = X_scaled[idx]
+    n_pts = len(X_v)
+    mcs = max(10, min(50, n_pts // 20))
+    ms = min(10, mcs)
+    if n_pts < mcs + 1:
+        continue
+    hdb = HDBSCAN(min_cluster_size=mcs, min_samples=ms)
+    labels = hdb.fit_predict(X_v)
+    hdb_arr[idx] = (labels == -1).astype(np.int8)
+    if (i + 1) % 100 == 0:
+        print(f"    HDBSCAN progress: {i+1}/{len(vessels)} vessels")
+
+df_model["anomaly_hdbscan"] = hdb_arr
+n_hdb = int(hdb_arr.sum())
+print(f"    → {n_hdb:,} ({n_hdb/n_total*100:.2f}%)")
+del hdb_arr, X_scaled
+gc.collect()
+
+# ── 앙상블 ──
 print("  앙상블...")
 df_model = ensemble_anomaly(df_model, threshold=2)
-n_final = df_model['anomaly_final'].sum()
-print(f"    → Ensemble: {n_final:,} ({n_final/len(df_model)*100:.2f}%)")
+n_final = int(df_model['anomaly_final'].sum())
+print(f"    → Ensemble: {n_final:,} ({n_final/n_total*100:.2f}%)")
 
 df_model.to_parquet(DATA_DIR / "ais_results.parquet", index=False)
 print(f"  저장: ais_results.parquet ({(DATA_DIR / 'ais_results.parquet').stat().st_size / 1e6:.1f} MB)")

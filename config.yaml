@@ -24,7 +24,7 @@ features:
 
 models:
   isolation_forest:
-    contamination: 0.05
+    # contamination: 0.05   # 제거: auto threshold (elbow method) 사용
     random_state: 42
 
   lof:

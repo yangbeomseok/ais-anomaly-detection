@@ -37,21 +37,29 @@ OUT_DIR = "results/figures"
 
 
 def impute_features(df: pd.DataFrame) -> pd.DataFrame:
-    """NaN을 선박별 중앙값으로 대체한다. 중앙값도 없으면 0으로 채운다."""
+    """NaN을 대체한다.
+    - heading_cog_diff: 0으로 대체 (Heading 미보고 = '괴리 없음' 가정)
+    - 나머지: 선박별 중앙값 → 전체 중앙값 → 0 순서로 대체
+    """
     df = df.copy()
     for col in FEATURE_COLS:
         if df[col].isna().any():
             n_na = df[col].isna().sum()
-            # 선박별 중앙값 대체
-            df[col] = df.groupby("MMSI")[col].transform(
-                lambda s: s.fillna(s.median())
-            )
-            # 그래도 남은 NaN (해당 선박이 전부 NaN인 경우) → 전체 중앙값
-            if df[col].isna().any():
-                df[col] = df[col].fillna(df[col].median())
-            # 최후의 수단
-            df[col] = df[col].fillna(0)
-            logger.info("  %s: %d NaN → 선박별 중앙값 대체 완료", col, n_na)
+
+            if col == "heading_cog_diff":
+                # Heading 미보고(511)는 괴리를 알 수 없으므로 0(정상 가정)
+                df[col] = df[col].fillna(0)
+                logger.info("  %s: %d NaN → 0 대체 (Heading 미보고)", col, n_na)
+            else:
+                # 선박별 중앙값 대체
+                df[col] = df.groupby("MMSI")[col].transform(
+                    lambda s: s.fillna(s.median())
+                )
+                # 그래도 남은 NaN → 전체 중앙값
+                if df[col].isna().any():
+                    df[col] = df[col].fillna(df[col].median())
+                df[col] = df[col].fillna(0)
+                logger.info("  %s: %d NaN → 선박별 중앙값 대체 완료", col, n_na)
     return df
 
 
@@ -118,6 +126,20 @@ def main():
     logger.info("Loading ais_featured.parquet...")
     df = pd.read_parquet("data/ais_featured.parquet")
     logger.info("Loaded: %d rows, %d cols", *df.shape)
+
+    # ── 1-1. GPS 텔레포테이션 필터 ─────────────────────────
+    if "LAT" in df.columns and "LON" in df.columns and "BaseDateTime" in df.columns:
+        df = df.sort_values(["MMSI", "BaseDateTime"]).reset_index(drop=True)
+        dlat = df.groupby("MMSI")["LAT"].diff()
+        dlon = df.groupby("MMSI")["LON"].diff()
+        dt = df.groupby("MMSI")["BaseDateTime"].diff().dt.total_seconds().replace(0, np.nan)
+        # 위도/경도 변화로 암묵적 속도 추정 (1도 ≈ 60해리)
+        implied_speed = np.sqrt(dlat**2 + dlon**2) * 60 / (dt / 3600)
+        gps_glitch = implied_speed > 200  # 200노트 초과 = GPS 점프
+        n_glitch = int(gps_glitch.sum())
+        if n_glitch > 0:
+            df = df[~gps_glitch].reset_index(drop=True)
+            logger.info("  GPS glitch removed: %d rows (implied speed > 200 kn)", n_glitch)
 
     # ── 2. NaN 복구 (dropna 대신 imputation) ────────────────
     logger.info("Imputing NaN values...")

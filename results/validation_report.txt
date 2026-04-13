@@ -2,16 +2,16 @@
 AIS Anomaly Detection — Domain Validation Report
 ======================================================================
 
-Total rows: 4,293,099
-Ensemble anomalies: 307,873 (7.17%)
+Total rows: 4,292,879
+Ensemble anomalies: 304,950 (7.10%)
 
                                    Rule  Rule Count  Detected (Ensemble)  Recall (%)  IF Recall (%)  LOF Recall (%)  HDBSCAN Recall (%)
       Dark Shipping\n(signal gap > 1hr)         461                  461       100.0          100.0           100.0               100.0
-Erratic Movement\n(course change > 90°)      444103                73696        16.6           35.6             4.2                26.5
-  Speed Anomaly\n(speed deviation > 3σ)       76255                23072        30.3           86.0             8.8                27.8
-     Heading-COG Mismatch\n(diff > 45°)     3101738               198074         6.4            9.4             5.1                18.1
-    Suspicious Anchoring\n(stop > 2hrs)     2297679                73784         3.2            7.5             4.2                 9.8
- Night High-Speed\n(night + SOG > 15kt)        8094                 1724        21.3          100.0             5.5                18.3
+Erratic Movement\n(course change > 90°)      444010                74357        16.7           37.4             4.2                27.2
+  Speed Anomaly\n(speed deviation > 3σ)       76249                22413        29.4           73.2             8.3                28.4
+     Heading-COG Mismatch\n(diff > 45°)     1568460               107769         6.9           13.1             5.2                16.0
+    Suspicious Anchoring\n(stop > 2hrs)     2297602                79158         3.4            8.0             4.2                10.0
+ Night High-Speed\n(night + SOG > 15kt)        8092                 1739        21.5          100.0             4.8                18.8
 
-Explained by domain rules: 239,213 / 307,873 (77.7%)
-Unexplained: 68,660 (22.3%)
+Explained by domain rules: 205,521 / 304,950 (67.4%)
+Unexplained: 99,429 (32.6%)
