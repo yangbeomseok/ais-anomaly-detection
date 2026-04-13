@@ -29,3 +29,7 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temp
+*.tmp
+작업상태.html

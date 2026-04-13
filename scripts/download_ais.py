@@ -11,7 +11,7 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 BASE_URL = "https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2022"
 START = date(2022, 1, 1)
-END = date(2022, 1, 31)
+END = date(2022, 1, 7)
 
 
 def download_day(d: date):
