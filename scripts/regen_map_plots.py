@@ -80,17 +80,18 @@ fig = plt.figure(figsize=(14, 9), facecolor="#0d1117")
 ax = make_map_ax(fig, full_extent)
 
 normal = df[df["anomaly_final"] == 0].sample(
-    min(15000, (df["anomaly_final"] == 0).sum()), random_state=42)
+    min(60000, (df["anomaly_final"] == 0).sum()), random_state=42)
 anomaly = df[df["anomaly_final"] == 1].sample(
     min(15000, (df["anomaly_final"] == 1).sum()), random_state=42)
 
-ax.scatter(normal["LON"], normal["LAT"], s=0.3, c="#3498db", alpha=0.2,
-           label="Normal", transform=ccrs.PlateCarree())
-ax.scatter(anomaly["LON"], anomaly["LAT"], s=2, c="#e74c3c", alpha=0.5,
-           label="Anomaly", transform=ccrs.PlateCarree())
+# Normal은 넓고 흐린 haze로, Anomaly는 그 위에 작고 뚜렷한 점으로
+ax.scatter(normal["LON"], normal["LAT"], s=4, c="#5dade2", alpha=0.35,
+           label="Normal", transform=ccrs.PlateCarree(), linewidths=0)
+ax.scatter(anomaly["LON"], anomaly["LAT"], s=2.5, c="#e74c3c", alpha=0.75,
+           label="Anomaly", transform=ccrs.PlateCarree(), linewidths=0, zorder=10)
 ax.set_title("Normal (blue) vs Anomaly (red)", color="white", fontsize=14, pad=12)
 ax.legend(loc="lower left", facecolor="#161b22", edgecolor="#30363d",
-          labelcolor="white", fontsize=10)
+          labelcolor="white", fontsize=10, markerscale=6)
 plt.tight_layout()
 plt.savefig(f"{OUT}/anomaly_map_static.png", dpi=DPI, bbox_inches="tight", facecolor="#0d1117")
 plt.close()

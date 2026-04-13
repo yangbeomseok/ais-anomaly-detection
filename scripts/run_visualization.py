@@ -210,12 +210,12 @@ def viz_static_map(df):
     ax.set_facecolor("#0d1117")
 
     normal = df[df["anomaly_final"] == 0].sample(
-        min(10000, (df["anomaly_final"] == 0).sum()), random_state=42)
+        min(30000, (df["anomaly_final"] == 0).sum()), random_state=42)
     anomaly = df[df["anomaly_final"] == 1].sample(
         min(10000, (df["anomaly_final"] == 1).sum()), random_state=42)
 
-    ax.scatter(normal["LON"], normal["LAT"], s=0.2, c="#3498db", alpha=0.2, label="Normal")
-    ax.scatter(anomaly["LON"], anomaly["LAT"], s=1.5, c="#e74c3c", alpha=0.5, label="Anomaly")
+    ax.scatter(normal["LON"], normal["LAT"], s=1.5, c="#3498db", alpha=0.35, label="Normal")
+    ax.scatter(anomaly["LON"], anomaly["LAT"], s=3, c="#e74c3c", alpha=0.6, label="Anomaly")
 
     if ctx:
         try:
@@ -227,7 +227,8 @@ def viz_static_map(df):
     ax.set_xlabel("Longitude", color="#8b949e")
     ax.set_ylabel("Latitude", color="#8b949e")
     ax.tick_params(colors="#8b949e")
-    ax.legend(loc="lower left", facecolor="#161b22", edgecolor="#30363d", labelcolor="white")
+    ax.legend(loc="lower left", facecolor="#161b22", edgecolor="#30363d",
+              labelcolor="white", markerscale=6)
 
     plt.tight_layout()
     path = f"{OUT_DIR}/anomaly_map_static.png"
